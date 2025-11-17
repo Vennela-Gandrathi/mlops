@@ -1,0 +1,65 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score, classification_report
+
+# --- 1. Load the data ---
+file_name = r"C:\Users\ADMIN 13\Downloads\metagenomic_combined_dataset.csv"
+df = pd.read_csv(file_name)
+
+# Drop the 'Unnamed: 0' column (Sample IDs) as it's not a feature
+df = df.drop(columns=['Unnamed: 0'])
+
+# --- 2. Separate Features (X) and Target (y) ---
+# Features are all 'Species_' columns
+X = df.drop('Label', axis=1)
+
+# Target is the 'Label' column
+y = df['Label']
+
+# --- 3. Encode the Target Variable ---
+# Classification algorithms typically require numerical labels.
+# LabelEncoder will convert 'Healthy', 'Disease', etc. to 0, 1, etc.
+le = LabelEncoder()
+y_encoded = le.fit_transform(y)
+print("Encoded Labels Mapping:")
+for original, encoded in zip(le.classes_, le.transform(le.classes_)):
+    print(f"'{original}' -> {encoded}")
+print("-" * 30)
+
+# --- 4. Split Data into Training and Testing Sets ---
+# 80% for training, 20% for testing
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
+)
+
+# --- 5. Initialize and Train the Random Forest Model ---
+# n_estimators is the number of trees in the forest.
+# random_state for reproducibility.
+rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier.fit(X_train, y_train)
+
+# Make predictions on the test set
+y_pred = rf_classifier.predict(X_test)
+
+# --- 6. Evaluate the Model ---
+
+# Calculate the accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Random Forest Model Accuracy: {accuracy:.4f}")
+print("-" * 30)
+
+# Generate a detailed classification report
+report = classification_report(
+    y_test, y_pred, target_names=le.classes_
+)
+print("Classification Report:\n", report)
+
+# --- Optional: Print Feature Importances ---
+# This shows which species were most important for the prediction
+feature_importances = pd.Series(rf_classifier.feature_importances_, index=X.columns)
+top_10_importances = feature_importances.nlargest(10)
+print("-" * 30)
+print("Top 10 Feature Importances (Species):\n", top_10_importances)
+
